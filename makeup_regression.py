@@ -35,10 +35,13 @@ facebook_metrics = fetch_ucirepo(id=368)
 X = facebook_metrics.data.features.copy()
 y = facebook_metrics.data.targets.copy()
 
+# %%
+X.info()
 
 # %%
 # Combine for easier exploration, using concat to keep features and target together
-df = ...
+df = pd.concat([X, y], axis=1)
+df.head()
 
 # =============================================================================
 # SECTION 1: Kernel Density Plot
@@ -48,12 +51,12 @@ df = ...
 # Use it to understand the shape and spread of a distribution before modeling.
 # %%
 # The raw distribution is heavily right-skewed — a common problem in regression.
-df[
+df["Total Interactions"].plot.kde(color="red")
 
 # %%
 
 # Let's also look at Page total likes
-df[
+df["Page total likes"].plot.kde(color="red")
 
 # KEY POINT: Skewed distributions can violate regression assumptions.
 # We'll address this with log/arcsinh transformations in Section 5.
@@ -68,13 +71,15 @@ df[
 # %%
 
 # Value counts
-print(df
+print(df.value_counts)
 
 # %%
 # One-hot encode 'Type' and 'Category' (creates new columns for each level), 
 # replace in the df, using pandas's get_dummies, four attributes, df, columns to encode, 
 # drop_first=True to avoid dummy variable trap, and prefix to add a prefix to the new columns
-df = pd.get_dummies(...
+
+df = pd.get_dummies(df, drop_first=True, columns=['Type', 'Category'], prefix=['Ty', 'Cat'])
+
                 
 
 # =============================================================================
@@ -90,17 +95,21 @@ df.info()
 
 # %%
 # Simple example: predict Total Interactions from Page total likes
-X_simple = df[  # sklearn expects 2D array for features
-y_target = df[
+X_simple = df['Page total likes'].values.reshape(-1,1)  # sklearn expects 2D array for features
+# fix variable name and spelling of the target column
+y_target = df['Total Interactions'].values
 
 
-# With intercept (default), fit.intercept=true/false, (then).fit
-model_with = LinearRegression
-# Without intercept
-model_without = LinearRegression(
+# With intercept (default)
+model_with = LinearRegression(fit_intercept=True).fit(X_simple, y_target)
 
-print(coefficients
+# Without intercept (force through origin)
+model_without = LinearRegression(fit_intercept=False).fit(X_simple, y_target)
 
+
+print(f"With intercept: Coefficient = {model_with.coef_[0]:.4f}, Intercept = {model_with.intercept_:.2f}")
+print(f"Without intercept: Coefficient = {model_without.coef_[0]:.4f}, Intercept = {model_without.intercept_:.2f}")
+      
 # KEY POINT: Unless your domain knowledge justifies it, always keep the intercept.
 # Forcing through the origin biases the slope estimate when y != 0 at x=0.
 
@@ -121,6 +130,8 @@ print(coefficients
 corr_matrix = df.corr()
 corr_with_target = corr_matrix['Total Interactions'].abs().sort_values(ascending=False)
 
+# select some kinda middle of the road features
+numeric_features = corr_with_target[5:11].index.tolist()  # Exclude the target variable itself
 
 # visualize the correlations with a matrix plot
 plt.figure(figsize=(8, 6))
@@ -129,8 +140,6 @@ plt.title('Correlation Matrix')
 plt.show()
 
 # %%
-# select some kinda middle of the road features
-numeric_features = corr_with_target[5:11].index.tolist()  # Exclude the target variable itself   
 
 # now you try pick some real terrible variables and see what happens
 
